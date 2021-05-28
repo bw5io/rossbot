@@ -1,4 +1,4 @@
-const { Client, MessageEmbed } = require('discord.js');
+const { Client, MessageEmbed, SystemChannelFlags } = require('discord.js');
 const axios = require('axios');
 const client = new Client();
 
@@ -8,6 +8,7 @@ const ltApiUrl = 'https://leetcode.com/api/problems/all/';
 const allProblems = [];
 const freeProblems = [];
 const paidProblems = [];
+const completedProblems = [];
 let totalProblems;
 
 /**
@@ -16,6 +17,12 @@ let totalProblems;
  */
 function getRandomInt(max) {
 	return Math.floor(Math.random() * Math.floor(max));
+}
+
+function checkExist(challengeID){
+	if (completedProblems.includes(challengeID)) return true;
+	completedProblems.push(challengeID);
+	return false;
 }
 
 /**
@@ -76,8 +83,13 @@ function problemType(data, msg, diff = '') {
 		data = filteredByDiff;
 	}
 	const dataLen = data.length;
-	const randProblem = getRandomInt(dataLen);
-	const aProblem = data[randProblem];
+	var randProblem = getRandomInt(dataLen);
+	var aProblem = data[randProblem];
+	while (checkExist(aProblem.id)==true){
+		randProblem = getRandomInt(dataLen);
+		aProblem = data[randProblem];
+	}
+	console.log(completedProblems);
 	const problemUrl = problemUrlBase + aProblem.titleSlug + '/';
 
 	const embed = new MessageEmbed()
