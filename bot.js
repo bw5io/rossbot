@@ -92,59 +92,57 @@ function problemType(data, msg, diff = '') {
 		data = filteredByDiff;
 	}
 	const dataLen = data.length;
-	const randProblem = getRandomInt(dataLen);
-	let server = msg.guild.id;   // get server id
-	const aProblem = data[randProblem];
-	console.log(server);
-	console.log(aProblem.id);
-	checkExist(server, aProblem.id);
-	const problemUrl = problemUrlBase + aProblem.titleSlug + '/';
-	const embed = new MessageEmbed()
-		.setTitle(aProblem.title)
-		.setColor('#f89f1b')
-		// online image from leetcode website for thumbnail (pls don't go down)
-		.setThumbnail('https://leetcode.com/static/images/LeetCode_logo_rvs.png')
-		// ToDo Scrape problem descriptions, add to object and embed (haHA might not do this)
-		.setDescription(`${aProblem.difficulty} ${
-			aProblem.paidOnly ? 'locked/paid' : 'unlocked/free'
-		} problem.`)
-		.setURL(problemUrl);
-	msg.channel.send(embed);
-}
 
-async function checkExist(ServerID, ChallengeID){
-	let output = pool.getConnection(function(err,conn){
+	pool.getConnection(function(err,conn){
 		if (err) throw err;
-		conn.query("SELECT * FROM attempted_challenges WHERE server_id = ? AND challenge_id = ?", [ServerID, ChallengeID], function(err, result){
-			let output;
+		conn.query("SELECT challenge_id FROM attempted_challenges WHERE server_id = ?", msg.guild.id, function(err, result){
 			if (err) throw err;
-			console.log(result);
-			if (result.length===0)
-			{
-				pool.getConnection(function(err, conn) {
-					if (err) throw err;
-					console.log("Connected!");
-					var sql = "INSERT INTO attempted_challenges (server_id, challenge_id) VALUES ?";
-					var values = [
-					  [ServerID, ChallengeID],
-					];
-					conn.query(sql, [values], function (err, result) {
-					  if (err) throw err;
-					  console.log("Number of records inserted: " + result.affectedRows);
-					});
-					conn.release();
-				});
+			let server = msg.guild.id;
+			resArray = result.map(v=>v.challenge_id);
+			let aProblem;
+			do{
+				const randProblem = getRandomInt(dataLen);
+				// get server id
+				aProblem = data[randProblem];
 			}
-			else {
-				output=true;
-				console.log(output);
-			}
+			while(resArray.includes(aProblem.id));
+			console.log(server);
+			console.log(aProblem.id);
+			createRecord(server,aProblem.id);
+			const problemUrl = problemUrlBase + aProblem.titleSlug + '/';
+			const embed = new MessageEmbed()
+				.setTitle(aProblem.title)
+				.setColor('#f89f1b')
+				// online image from leetcode website for thumbnail (pls don't go down)
+				.setThumbnail('https://leetcode.com/static/images/LeetCode_logo_rvs.png')
+				// ToDo Scrape problem descriptions, add to object and embed (haHA might not do this)
+				.setDescription(`${aProblem.difficulty} ${
+					aProblem.paidOnly ? 'locked/paid' : 'unlocked/free'
+				} problem.`)
+				.setURL(problemUrl);
+			msg.channel.send(embed);
 			conn.release();
 		});
 	});
-	console.log(output);
-	return output;
+
 }
+
+function createRecord(ServerID, ChallengeID){
+	pool.getConnection(function(err, conn) {
+		if (err) throw err;
+		console.log("Connected!");
+		var sql = "INSERT INTO attempted_challenges (server_id, challenge_id) VALUES ?";
+		var values = [
+		  [ServerID, ChallengeID],
+		];
+		conn.query(sql, [values], function (err, result) {
+		  if (err) throw err;
+		  console.log("Number of records inserted: " + result.affectedRows);
+		});
+		conn.release();
+	});
+}
+
 
 client.on('message', (msg) => {
 	if (!msg.content.startsWith(prefix) || msg.author.bot) return;
@@ -178,8 +176,17 @@ client.on('message', (msg) => {
 			'\n\nAdding difficulty modifiers:\n\n\t!problem <free | paid> <easy | medium | hard> - lets you pick a random free or paid problem of the chosen difficulty.```',
 		);
 	}
-	else if (command === 'debug'){
-		msg.channel.send(checkExist(0,0));
+	else if (command === 'completed'){
+		pool.getConnection(function(err,conn){
+			if (err) throw err;
+			conn.query("SELECT challenge_id FROM attempted_challenges WHERE server_id = ?", msg.guild.id, function(err, result){
+				if (err) throw err;
+				resArray = result.map(v=>v.challenge_id);
+				msg.channel.send("Completed Challenges");
+				msg.channel.send(resArray);
+				conn.release();
+			});
+		});
 
 	}
 	else {
