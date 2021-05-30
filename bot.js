@@ -1,3 +1,4 @@
+
 const { Client, MessageEmbed, VoiceConnection } = require('discord.js');
 const axios = require('axios');
 const client = new Client();
@@ -8,6 +9,7 @@ const ltApiUrl = 'https://leetcode.com/api/problems/all/';
 const allProblems = [];
 const freeProblems = [];
 const paidProblems = [];
+const completedProblems = [];
 let totalProblems;
 
 // Connect to database
@@ -32,6 +34,12 @@ pool.getConnection(function(err, conn) {
 function getRandomInt(max) {
 	let randomizedNumber = Math.floor(Math.random() * Math.floor(max));
 	return randomizedNumber;
+}
+
+function checkExist(challengeID){
+	if (completedProblems.includes(challengeID)) return true;
+	completedProblems.push(challengeID);
+	return false;
 }
 
 /**
@@ -92,7 +100,6 @@ function problemType(data, msg, diff = '') {
 		data = filteredByDiff;
 	}
 	const dataLen = data.length;
-
 	pool.getConnection(function(err,conn){
 		if (err) throw err;
 		conn.query("SELECT challenge_id FROM attempted_challenges WHERE server_id = ?", msg.guild.id, function(err, result){
